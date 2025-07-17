@@ -9,7 +9,7 @@
 2160
 2160
 2160
-
+10
 
 Default:
 Mode=10				//Mode Number of Intrinsic Mode Function (IMF)
@@ -23,5 +23,5 @@ ImageSizeX1=3840		//HSA Time
 ImageSizeY1=2160		//HSA Frequency
 ImageSizeX2=2160		//HHS FM frequency
 ImageSizeY2=2160		//HHS AM frequency
-
+GIF_Time_cell_group=10                   //HHSA GIF time cell group
 
