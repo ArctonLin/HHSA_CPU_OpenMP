@@ -970,8 +970,8 @@ int main(int argc, char* argv[]) {
 	HSA_gr.Label('y', "Frequency", 0);
 	HSA_gr.SetRange('c', HSA_min, log(HSA_max));
 	HSA_gr.SetFunc("", "", "", "lg(c)");
-	HSA_gr.Dens(HSA_map);
-	HSA_gr.Colorbar(">");
+	HSA_gr.Dens(HSA_map, "wbcyr");
+	HSA_gr.Colorbar("wbcyr>");
 	HSA_gr.Puts(mglPoint(1.32, 1.22), "log-scale\n(10^n)");
 	HSA_gr.SetRange('x', 0.0, max_time);
 	HSA_gr.SetRange('y', 0.0, max_frequency);
@@ -1154,8 +1154,8 @@ int main(int argc, char* argv[]) {
 	HHS_gr.Label('y', "AM Frequency", 0);
 	HHS_gr.SetRange('c', HHS_min, log(HHS_max));
 	HHS_gr.SetFunc("", "", "", "lg(c)");
-	HHS_gr.Dens(HHS_map);
-	HHS_gr.Colorbar(">");
+	HHS_gr.Dens(HHS_map, "wbcyr");
+	HHS_gr.Colorbar("wbcyr>");
 	HHS_gr.Puts(mglPoint(18.0, 220.0), "log-scale\n(10^n)");
 	HHS_gr.SetRange('x', 0.0, max_FM_frequency);
 	HHS_gr.SetRange('y', 0.0, max_AM_frequency);
@@ -1268,7 +1268,7 @@ int main(int argc, char* argv[]) {
 	//HHSA_gr.Box();
 	//HHSA_gr.SetOrigin(max_time/2.0,max_FM_frequency/2.0,max_AM_frequency/2.0);
 	HHSA_gr.Dots(HHSA_3D_x, HHSA_3D_y, HHSA_3D_z, HHSA_3D_a);
-	HHSA_gr.Colorbar(">");
+	HHSA_gr.Colorbar("wbcyr>");
 	//HHSA_gr.Puts(mglPoint(Time_cell, Freq_cell*1.3, 0),"log-scale\n(10^n)");
 	//HHSA_gr.Puts(mglPoint(Time_cell*0.5, 0, -Holo_Freq_cell*0.25), "Time");
 	//HHSA_gr.Puts(mglPoint(0, Freq_cell*0.5, Holo_Freq_cell*1.25), "FMfreq");
@@ -1325,8 +1325,8 @@ int main(int argc, char* argv[]) {
 		HHSA_animation_gr.Label('y', "AM Frequency", 0);
 		HHSA_animation_gr.SetRange('c', HHSA_min, log(HHSA_max));
 		HHSA_animation_gr.SetFunc("", "", "", "lg(c)");
-		HHSA_animation_gr.Dens(HHSA_map);
-		HHSA_animation_gr.Colorbar(">");
+		HHSA_animation_gr.Dens(HHSA_map, "wbcyr");
+		HHSA_animation_gr.Colorbar("wbcyr>");
 		HHSA_animation_gr.SetRange('x', -1.0, 1.0);
 		HHSA_animation_gr.SetRange('y', -1.0, 1.0);
 		HHSA_animation_gr.Puts(mglPoint(1.35, 1.2), "log-scale\n(10^n)");
