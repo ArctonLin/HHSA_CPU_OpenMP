@@ -1232,8 +1232,8 @@ int main(int argc, char* argv[]) {
 				//HHSA_3D_map[ k * Freq_cell* Holo_Freq_cell + j* Holo_Freq_cell + i] = hhsa_map[k][j][i] + 0.00000001;
 				if (hhsa_map[k][j][i] > HHSA_threshold) {
 					HHSA_3D_x[index] = k * HHSA_dt;
-					HHSA_3D_y[index] = j * HHSA_dFMf;
-					HHSA_3D_z[index] = i * HHSA_dAMf;
+					HHSA_3D_y[index] = i * HHSA_dAMf;
+					HHSA_3D_z[index] = j * HHSA_dFMf;
 					HHSA_3D_a[index++] = hhsa_map[k][j][i];
 				}
 			}
@@ -1256,8 +1256,8 @@ int main(int argc, char* argv[]) {
 	//HHSA_gr.Alpha(true);
 	//HHSA_gr.SetAlphaDef(0.7);
 	HHSA_gr.SetRange('x',0.0,max_time);
-	HHSA_gr.SetRange('y',0.0,max_FM_frequency);
-	HHSA_gr.SetRange('z',0.0,max_AM_frequency);
+	HHSA_gr.SetRange('y',0.0,max_AM_frequency);
+	HHSA_gr.SetRange('z',max_FM_frequency,0.0);
 	//HHSA_gr.SetRange('x',0.0, Time_cell);
 	//HHSA_gr.SetRange('y',0.0, Freq_cell);
 	//HHSA_gr.SetRange('z',0.0, Holo_Freq_cell);
@@ -1273,10 +1273,10 @@ int main(int argc, char* argv[]) {
 	//HHSA_gr.Puts(mglPoint(Time_cell*0.5, 0, -Holo_Freq_cell*0.25), "Time");
 	//HHSA_gr.Puts(mglPoint(0, Freq_cell*0.5, Holo_Freq_cell*1.25), "FMfreq");
 	//HHSA_gr.Puts(mglPoint(-Time_cell * 0.25, 0, Holo_Freq_cell * 0.5), "AMfreq");
-	HHSA_gr.Puts(mglPoint(max_time, max_FM_frequency * 1.3, 0), "log-scale\n(10^n)");
-	HHSA_gr.Puts(mglPoint(max_time * 0.5, 0, -max_AM_frequency * 0.25), "Time");
-	HHSA_gr.Puts(mglPoint(0, max_FM_frequency * 0.5, max_AM_frequency * 1.25), "FMfreq");
-	HHSA_gr.Puts(mglPoint(-max_time * 0.25, 0, max_AM_frequency * 0.5), "AMfreq");
+	HHSA_gr.Puts(mglPoint(max_time, max_AM_frequency * 1.3, -max_FM_frequency), "log-scale\n(10^n)");
+	HHSA_gr.Puts(mglPoint(max_time * 0.5, 0, max_FM_frequency * 1.25), "Time");
+	HHSA_gr.Puts(mglPoint(0, max_AM_frequency * 0.5, -max_FM_frequency * 0.25), "AMfreq");
+	HHSA_gr.Puts(mglPoint(-max_time * 0.25, 0, max_FM_frequency * 0.5), "FMfreq");
 	HHSA_gr.Axis();
 
 	HHSA_gr.WriteFrame(OutputFileName);
