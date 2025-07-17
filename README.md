@@ -15,7 +15,9 @@
 
 - And Instantaneous Frequency Paper here: https://www.worldscientific.com/doi/10.1142/S1793536909000096
 
-#### Hilbert Spectra Analysis (HSA, HHT)
+#### Hilbert-Huang Transform (HHT)
+![HHT](HeartRate.txt_HHT.png)
+#### Hilbert Spectra Analysis (HSA)
 ![HSA](HeartRate.txt_HSA.png)
 #### Holo-Hilbert Spectra (HHS)
 ![HHS](HeartRate.txt_HHS.png)

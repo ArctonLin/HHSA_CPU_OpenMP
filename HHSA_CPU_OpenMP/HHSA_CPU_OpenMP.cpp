@@ -159,15 +159,15 @@ void EEMD(float* data, float** result, float** residual, int length, int mode, f
 	float* Source = (float*)malloc(sizeof(float) * length);
 	float* Current = (float*)malloc(sizeof(float) * length);
 	float** MixtureResult = (float**)malloc(mode * sizeof(float*));
-	//float** MixtureResidual = (float**)malloc(mode * sizeof(float*));
+	float** MixtureResidual = (float**)malloc(mode * sizeof(float*));
 	for (int j = 0; j < mode; ++j) {
 		MixtureResult[j] = (float*)malloc(length * sizeof(float));
-		//MixtureResidual[j] = (float*)malloc(length * sizeof(float));
+		MixtureResidual[j] = (float*)malloc(length * sizeof(float));
 	}
 	for (int j = 0; j < mode; ++j) {
 		for (int i = 0; i < length; ++i) {
 			MixtureResult[j][i] = 0.0;
-			//MixtureResidual[j][i] = 0.0;
+			MixtureResidual[j][i] = 0.0;
 		}
 	}
 	float avg = 0.0;
@@ -234,6 +234,7 @@ void EEMD(float* data, float** result, float** residual, int length, int mode, f
 				for (int i = 0; i < length; ++i) {
 					#pragma omp atomic
 					MixtureResult[j][i] += Result[j][i];
+					MixtureResidual[j][i] += Residual[j][i];
 				}
 			}
 		//}
@@ -249,6 +250,7 @@ void EEMD(float* data, float** result, float** residual, int length, int mode, f
 					for (int i = 0; i < length; ++i) {
 						#pragma omp atomic
 						MixtureResult[j][i] += Result[j][i];
+						MixtureResidual[j][i] += Residual[j][i];
 					}
 				}
 			//}
@@ -261,6 +263,7 @@ void EEMD(float* data, float** result, float** residual, int length, int mode, f
 	for (int j = 0; j < mode; ++j) {
 		for (int i = 0; i < length; ++i) {
 			result[j][i] = (data_stdev * MixtureResult[j][i]) / EnsembleNumber;
+			residual[j][i] = (data_stdev * MixtureResidual[j][i]) / EnsembleNumber;
 		}
 	}
 
@@ -295,18 +298,24 @@ void EEMD(float* data, float** result, float** residual, int length, int mode, f
 	*/
 
 	//Calcuate Residual from Result
+	/*
 	for (int i = 0; i < length; ++i) {
-		Current[i] = data[i] + avg;
+		//Current[i] = data[i] + avg;
+		Current[i] = data[i];
 	}
+	*/
 	for (int j = 0; j < mode; ++j) {
 		//Check IMF result
 		if (STDEV(result[j], length) > 0.01 * STDEV(data, length)) EMD_success[j] = true;
 		else EMD_success[j] = false;
 
 		//Calculate Residual
+		/*
 		for (int i = 0; i < length; ++i) {
-			Current[i] = residual[j][i] = Current[i] - result[j][i];
+			Current[i] = Current[i] - result[j][i];
+			residual[j][i] = Current[i];
 		}
+		*/
 	}
 
 	//Release Memory
@@ -827,6 +836,57 @@ int main(int argc, char* argv[]) {
 	}
 	printf("\n\n");
 
+	printf("Generate HHT result  ");
+
+	mglGraph HHT_gr;
+	HHT_gr.SetPenDelta(0.33);
+	HHT_gr.SetSize(ImageSizeY1*2, ImageSizeX1*2);
+	HHT_gr.Alpha(false);
+	int rows = 1;
+	int cols = (mode + 2);
+	HHT_gr.SubPlot(rows, cols, 0);
+	HHT_gr.Title("Signal");
+	mglData y(data_len);
+	float y_min = 1000000000.0, y_max = -1000000000.0;
+	for (size_t k = 0; k < data_len; ++k) {
+		y.a[k] = data[k];
+		if (y.a[k] < y_min) y_min = y.a[k];
+		if (y.a[k] > y_max) y_max = y.a[k];
+	}
+	HHT_gr.SetRange('y', y_min, y_max);
+	HHT_gr.Plot(y, "-");
+	HHT_gr.Box();
+	for (int j = 0; j < mode; ++j) {
+		HHT_gr.SubPlot(rows, cols, j+1);
+		HHT_gr.Title(("IMF " + std::to_string(j + 1)).c_str());
+		//mglData y(data_len);
+		y_min = 1000000000.0, y_max = -1000000000.0;
+		for (size_t k = 0; k < data_len; ++k) {
+			y.a[k] = result[j][k];
+			if (y.a[k] < y_min) y_min = y.a[k];
+			if (y.a[k] > y_max) y_max = y.a[k];
+		}
+		HHT_gr.SetRange('y', y_min, y_max);
+		HHT_gr.Plot(y, "-");
+		HHT_gr.Box();
+	}
+	HHT_gr.SubPlot(rows, cols, mode+1);
+	HHT_gr.Title("Residual");
+	mglData r(data_len);
+	y_min = 1000000000.0, y_max = -1000000000.0;
+	for (size_t k = 0; k < data_len; ++k) {
+		r.a[k] = residual[mode-1][k];
+		if (r.a[k] < y_min) y_min = r.a[k];
+		if (r.a[k] > y_max) y_max = r.a[k];
+	}
+	HHT_gr.SetRange('y', y_min, y_max);
+	HHT_gr.Plot(r, "-");
+	HHT_gr.Box();
+	sprintf(OutputFileName, "%s_HHT.png", InputFileName);
+	//HHT_gr.WriteFrame(OutputFileName);
+	HHT_gr.WritePNG(OutputFileName, "", false);
+	printf("\n\n");
+
 	//Normalized Direct Quadrature
 	printf("NDQ report:\n");
 	for (int j = 0; j < mode; ++j) printf("%d", (j + 1) % 10);
@@ -965,6 +1025,7 @@ int main(int argc, char* argv[]) {
 	//output HSA to png
 	sprintf(OutputFileName, "%s_HSA.png", InputFileName);
 	HSA_gr.SetSize(ImageSizeX1, ImageSizeY1);
+	HSA_gr.Alpha(false);
 	HSA_gr.Title("Hilbert Spectra Analysis");
 	HSA_gr.Label('x', "Time", 0);
 	HSA_gr.Label('y', "Frequency", 0);
@@ -976,7 +1037,8 @@ int main(int argc, char* argv[]) {
 	HSA_gr.SetRange('x', 0.0, max_time);
 	HSA_gr.SetRange('y', 0.0, max_frequency);
 	HSA_gr.Axis();
-	HSA_gr.WriteFrame(OutputFileName);
+	//HSA_gr.WriteFrame(OutputFileName);
+	HSA_gr.WritePNG(OutputFileName, "", false);
 
 	//update HSA parameter
 	sprintf(OutputFileName, "%s_HSA.txt", InputFileName);
@@ -1149,6 +1211,7 @@ int main(int argc, char* argv[]) {
 	HHS_gr.Clf();
 	HHS_gr.NewFrame();
 	HHS_gr.SetSize(ImageSizeX2, ImageSizeY2);
+	HHS_gr.Alpha(false);
 	HHS_gr.Title("Holo-Hilbert Spetra");
 	HHS_gr.Label('x', "FM Frequency", 0);
 	HHS_gr.Label('y', "AM Frequency", 0);
@@ -1160,7 +1223,8 @@ int main(int argc, char* argv[]) {
 	HHS_gr.SetRange('x', 0.0, max_FM_frequency);
 	HHS_gr.SetRange('y', 0.0, max_AM_frequency);
 	HHS_gr.Axis();
-	HHS_gr.WriteFrame(OutputFileName);
+	//HHS_gr.WriteFrame(OutputFileName);
+	HHS_gr.WritePNG(OutputFileName, "", false);
 
 	//update HHS parameter
 	sprintf(OutputFileName, "%s_HHS.txt", InputFileName);
@@ -1249,6 +1313,7 @@ int main(int argc, char* argv[]) {
 	//Not finish, you can write your own 3d plot!!
 	HHSA_gr.Clf();
 	HHSA_gr.SetSize(ImageSizeX2, ImageSizeY2);
+	HHSA_gr.Alpha(false);
 	HHSA_gr.Title("Holo-Hilbert");
 	HHSA_gr.Title("Spetra Analysis");
 	HHSA_gr.SetRange('c',HHSA_min,log(HHSA_max));
@@ -1279,8 +1344,8 @@ int main(int argc, char* argv[]) {
 	HHSA_gr.Puts(mglPoint(-max_time * 0.25, 0, max_FM_frequency * 0.5), "FMfreq");
 	HHSA_gr.Axis();
 
-	HHSA_gr.WriteFrame(OutputFileName);
-	
+	//HHSA_gr.WriteFrame(OutputFileName);
+	HHSA_gr.WritePNG(OutputFileName, "", false);
 
 	mglGraph HHSA_animation_gr;
 	sprintf(OutputFileName, "%s_HHSA.gif", InputFileName);
