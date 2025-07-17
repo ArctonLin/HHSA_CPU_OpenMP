@@ -438,18 +438,25 @@ void HSA(float** IF, float** AM, int length, int mode, bool* NDQ_success, float*
 		}
 	}
 	maxT = (float)length;
-	max_frequency = maxF;
+	//max_frequency = maxF / 2.0;
+	maxF = max_frequency;
 	dT = maxT / (float)(Time_cell - 1);
 	dF = maxF / (float)(Freq_cell - 1);
 
 	//Calculate HSA map
 	for (int i = 0; i < length; ++i) {
 		x = (int)((float)i / dT);		//Time
-		if (x > Time_cell - 1) printf("x=%d out of range\n", x);
+		if (x > Time_cell - 1) {
+			//printf("x=%d out of range\n", x);
+			continue;
+		}
 		for (int j = 0; j < mode; ++j) {
 			if (NDQ_success[j]) {
 				y = (int)(IF[j][i] / dF);		//Frequency
-				if (y > Freq_cell - 1) printf("y=%d out of range\n", y);
+				if (y > Freq_cell - 1) {
+					//printf("y=%d out of range\n", y);
+					continue;
+				}
 				map[x][y] += AM[j][i];		//[Time][Frequency]
 			}
 		}
@@ -499,8 +506,8 @@ void HHS(float** IF, float*** Holo_IF, float*** Holo_AM, int length, int mode, b
 			}
 		}
 	}
-	dFMF = maxFMF / (float)(Freq_cell - 1);
-	max_FM_frequency = maxFMF;
+	dFMF = maxFMF / 2.0 / (float)(Freq_cell - 1);
+	max_FM_frequency = maxFMF / 2.0;
 
 	//Measure max AM frequency
 	maxAMF = 0.0;
@@ -513,19 +520,25 @@ void HHS(float** IF, float*** Holo_IF, float*** Holo_AM, int length, int mode, b
 			}
 		}
 	}
-	dAMF = maxAMF / (float)(Holo_Freq_cell - 1);
-	max_AM_frequency = maxAMF;
+	dAMF = maxAMF / 2.0 / (float)(Holo_Freq_cell - 1);
+	max_AM_frequency = maxAMF / 2.0;
 
 	//Calculate HHS map
 	for (int i = 0; i < length; ++i) {
 		for (int j = 0; j < mode; ++j) {
 			if (NDQ_success[j]) {
 				x = (int)(IF[j][i] / dFMF);	//FM
-				if (x > Freq_cell - 1) printf("x=%d out of range\n", x);
+				if (x > Freq_cell - 1) {
+					//printf("x=%d out of range\n", x);
+					continue;
+				}
 				for (int k = 0; k < mode; ++k) {
 					if (Holo_NDQ_success[j][k]) {
 						y = (int)(Holo_IF[j][k][i] / dAMF);	//AM
-						if (y > Holo_Freq_cell - 1) printf("y=%d out of range\n", y);
+						if (y > Holo_Freq_cell - 1) {
+							//printf("y=%d out of range\n", y);
+							continue;
+						}
 						map[x][y] += Holo_AM[j][k][i];		//[FM][AM]
 					}
 				}
@@ -552,6 +565,7 @@ void HHS2(float** IF, float*** Holo_IF, float*** Holo_AM, int length, int mode, 
 	maxT = (float)length;
 	dT = maxT / (float)(Time_cell - 1);
 
+	/*
 	//Measure max FM frequency
 	maxFMF = 0.0;
 	for (int j = 0; j < mode; ++j) {
@@ -561,10 +575,14 @@ void HHS2(float** IF, float*** Holo_IF, float*** Holo_AM, int length, int mode, 
 			}
 		}
 	}
-	dFMF = maxFMF / (float)(Freq_cell - 1);
-	max_FM_frequency = maxFMF;
+	*/
+	maxFMF = max_FM_frequency;
+	dFMF = maxFMF / 2.0 / (float)(Freq_cell - 1);
+	//max_FM_frequency = maxFMF / 2.0;
+
 
 	//Measure max AM frequency
+	/*
 	maxAMF = 0.0;
 	for (int j = 0; j < mode; ++j) {
 		for (int k = 0; k < mode; ++k) {
@@ -575,8 +593,10 @@ void HHS2(float** IF, float*** Holo_IF, float*** Holo_AM, int length, int mode, 
 			}
 		}
 	}
-	dAMF = maxAMF / (float)(Holo_Freq_cell - 1);
-	max_AM_frequency = maxAMF;
+	*/
+	maxAMF = max_AM_frequency;
+	dAMF = maxAMF / 2.0 / (float)(Holo_Freq_cell - 1);
+	//max_AM_frequency = maxAMF / 2.0;
 
 	//Calculate HHS map
 	for (int i = 0; i < length; ++i) {
@@ -584,11 +604,17 @@ void HHS2(float** IF, float*** Holo_IF, float*** Holo_AM, int length, int mode, 
 		for (int j = 0; j < mode; ++j) {
 			if (NDQ_success[j]) {
 				x = (int)(IF[j][i] / dFMF);	//FM
-				if (x > Freq_cell - 1) printf("x=%d out of range\n", x);
+				if (x > Freq_cell - 1) {
+					//printf("x=%d out of range\n", x);
+					continue;
+				}
 				for (int k = 0; k < mode; ++k) {
 					if (Holo_NDQ_success[j][k]) {
 						y = (int)(Holo_IF[j][k][i] / dAMF);	//AM
-						if (y > Holo_Freq_cell - 1) printf("y=%d out of range\n", y);
+						if (y > Holo_Freq_cell - 1) {
+							//printf("y=%d out of range\n", y);
+							continue;
+						}
 						map[x][y] += Holo_AM[j][k][i];		//[FM][AM]
 						map2[t][x][y] += Holo_AM[j][k][i];	//[Time][FM][AM]
 					}
@@ -599,7 +625,7 @@ void HHS2(float** IF, float*** Holo_IF, float*** Holo_AM, int length, int mode, 
 }
 
 int main(int argc, char* argv[]) {
-	puts("HHSA version 1.2.3 (CardLin)");
+	puts("HHSA version 2.0 (Arcton Lin)");
 
 	FILE* fp;
 	char InputFileName[255], OutputFileName[255], Text[255];
@@ -607,7 +633,8 @@ int main(int argc, char* argv[]) {
 	int data_len = 0;
 	int mode, ensemble;
 	int Time_cell, Freq_cell, Holo_Freq_cell, ImageSizeX1, ImageSizeY1, ImageSizeX2, ImageSizeY2;
-	float TargetSTDEV, dt; //dt=1.0/SampleRate(hz) 
+	float TargetSTDEV, dt; //dt=1.0/SampleRate(hz)
+	int Time_cell_group;
 	bool CEEMD = true; //Enable CEEMD?
 
 	//Read default profile
@@ -627,6 +654,7 @@ int main(int argc, char* argv[]) {
 	fscanf(fp, "%d", &ImageSizeY1);
 	fscanf(fp, "%d", &ImageSizeX2);
 	fscanf(fp, "%d", &ImageSizeY2);
+	fscanf(fp, "%d", &Time_cell_group);
 	fclose(fp);
 
 	/*
@@ -868,6 +896,7 @@ int main(int argc, char* argv[]) {
 	fclose(fp);
 
 	//Execute Hilbert Spetra Analysis
+	max_frequency = 1.0 / dt;
 	HSA(IF, AM, data_len, mode, NDQ_success, hsa_map, Time_cell, Freq_cell, max_frequency);
 
 	printf("Generate HSA result  ");
@@ -943,7 +972,7 @@ int main(int argc, char* argv[]) {
 	HSA_gr.SetFunc("", "", "", "lg(c)");
 	HSA_gr.Dens(HSA_map);
 	HSA_gr.Colorbar(">");
-	HSA_gr.Puts(mglPoint(1.35, 1.2), "log-scale\n(10^n)");
+	HSA_gr.Puts(mglPoint(1.32, 1.22), "log-scale\n(10^n)");
 	HSA_gr.SetRange('x', 0.0, max_time);
 	HSA_gr.SetRange('y', 0.0, max_frequency);
 	HSA_gr.Axis();
@@ -1051,6 +1080,8 @@ int main(int argc, char* argv[]) {
 
 	//Execute Holo Hilbert Spectrum
 	//HHS(IF,Holo_IF,Holo_AM,data_len,mode,NDQ_success,Holo_NDQ_success,hhs_map,Freq_cell,Holo_Freq_cell,max_FM_frequency,max_AM_frequency);
+	max_FM_frequency = 1.0 / dt;
+	max_AM_frequency = 1.0 / dt;
 	HHS2(IF, Holo_IF, Holo_AM, data_len, mode, NDQ_success, Holo_NDQ_success, hhs_map, hhsa_map, Time_cell, Freq_cell, Holo_Freq_cell, max_FM_frequency, max_AM_frequency);
 
 	printf("Generate HHS result  ");
@@ -1115,6 +1146,8 @@ int main(int argc, char* argv[]) {
 
 	//output HHS to png
 	sprintf(OutputFileName, "%s_HHS.png", InputFileName);
+	HHS_gr.Clf();
+	HHS_gr.NewFrame();
 	HHS_gr.SetSize(ImageSizeX2, ImageSizeY2);
 	HHS_gr.Title("Holo-Hilbert Spetra");
 	HHS_gr.Label('x', "FM Frequency", 0);
@@ -1123,7 +1156,7 @@ int main(int argc, char* argv[]) {
 	HHS_gr.SetFunc("", "", "", "lg(c)");
 	HHS_gr.Dens(HHS_map);
 	HHS_gr.Colorbar(">");
-	HHS_gr.Puts(mglPoint(1.35, 1.2), "log-scale\n(10^n)");
+	HHS_gr.Puts(mglPoint(18.0, 220.0), "log-scale\n(10^n)");
 	HHS_gr.SetRange('x', 0.0, max_FM_frequency);
 	HHS_gr.SetRange('y', 0.0, max_AM_frequency);
 	HHS_gr.Axis();
@@ -1188,53 +1221,6 @@ int main(int argc, char* argv[]) {
 	fprintf(fp, "HHSA_max=%f\nHHSA_min=%f\n", HHSA_max, HHSA_min);
 	fclose(fp);
 
-	/*
-	//output HHSA to png
-	for (int k = 0; k < Time_cell; ++k) {
-
-		
-		//Initial HHSA gr map
-		//for(int j=0;j<Freq_cell;++j){
-		//	for(int i=0;i<Holo_Freq_cell;++i){
-		//		HHSA_map[i*Freq_cell+j]=0.0;
-		//	}
-		//}
-		
-
-		//Graph of a time cell
-		for (int j = 0; j < Freq_cell; ++j) {
-			for (int i = 0; i < Holo_Freq_cell; ++i) {
-				if (hhsa_map[k][j][i] > 1000000000000.0 || hhsa_map[k][j][i] < -1000000000000.0) continue;
-				HHSA_map[i * Freq_cell + j] = hhsa_map[k][j][i] + 0.00000001;
-			}
-		}
-
-		printf("\n\nGenerate HHSA time = %f / %f  ", k * HHSA_dt, max_time);
-
-		//output HHSA to png
-		sprintf(OutputFileName, "%s_HHSA_TimeCell%04d.png", InputFileName, k);
-		HHSA_gr.Clf();
-		HHSA_gr.SetSize(ImageSizeX2, ImageSizeY2);
-		HHSA_gr.Title("Holo-Hilbert");
-		HHSA_gr.Title("Spetra Analysis");
-		sprintf(Text, "T=%f", k * HHSA_dt);
-		HHSA_gr.Title(Text);
-		HHSA_gr.Label('x', "FM Frequency", 0);
-		HHSA_gr.Label('y', "AM Frequency", 0);
-		HHSA_gr.SetRange('c', HHSA_min, log(HHSA_max));
-		HHSA_gr.SetFunc("", "", "", "lg(c)");
-		HHSA_gr.Dens(HHSA_map);
-		HHSA_gr.Colorbar(">");
-		HHSA_gr.SetRange('x', -1.0, 1.0);
-		HHSA_gr.SetRange('y', -1.0, 1.0);
-		HHSA_gr.Puts(mglPoint(1.35, 1.2), "log-scale\n(10^n)");
-		HHSA_gr.SetRange('x', 0.0, max_FM_frequency);
-		HHSA_gr.SetRange('y', 0.0, max_AM_frequency);
-		HHSA_gr.Axis();
-		HHSA_gr.WriteFrame(OutputFileName);
-	}
-	*/
-
 	//mglData HHSA_3D_map(Time_cell, Freq_cell, Holo_Freq_cell);
 	mglData HHSA_3D_x(HHSA_length), HHSA_3D_y(HHSA_length), HHSA_3D_z(HHSA_length), HHSA_3D_a(HHSA_length);
 	
@@ -1245,9 +1231,9 @@ int main(int argc, char* argv[]) {
 				if (hhsa_map[k][j][i] > 1000000000000.0 || hhsa_map[k][j][i] < -1000000000000.0) continue;
 				//HHSA_3D_map[ k * Freq_cell* Holo_Freq_cell + j* Holo_Freq_cell + i] = hhsa_map[k][j][i] + 0.00000001;
 				if (hhsa_map[k][j][i] > HHSA_threshold) {
-					HHSA_3D_x[index] = k;
-					HHSA_3D_y[index] = j;
-					HHSA_3D_z[index] = i;
+					HHSA_3D_x[index] = k * HHSA_dt;
+					HHSA_3D_y[index] = j * HHSA_dFMf;
+					HHSA_3D_z[index] = i * HHSA_dAMf;
 					HHSA_3D_a[index++] = hhsa_map[k][j][i];
 				}
 			}
@@ -1269,12 +1255,12 @@ int main(int argc, char* argv[]) {
 	HHSA_gr.SetFunc("","","","lg(c)");
 	//HHSA_gr.Alpha(true);
 	//HHSA_gr.SetAlphaDef(0.7);
-	//HHSA_gr.SetRange('x',0.0,max_time);
-	//HHSA_gr.SetRange('y',0.0,max_FM_frequency);
-	//HHSA_gr.SetRange('z',0.0,max_AM_frequency);
-	HHSA_gr.SetRange('x',0.0, Time_cell);
-	HHSA_gr.SetRange('y',0.0, Freq_cell);
-	HHSA_gr.SetRange('z',0.0, Holo_Freq_cell);
+	HHSA_gr.SetRange('x',0.0,max_time);
+	HHSA_gr.SetRange('y',0.0,max_FM_frequency);
+	HHSA_gr.SetRange('z',0.0,max_AM_frequency);
+	//HHSA_gr.SetRange('x',0.0, Time_cell);
+	//HHSA_gr.SetRange('y',0.0, Freq_cell);
+	//HHSA_gr.SetRange('z',0.0, Holo_Freq_cell);
 	//HHSA_gr.Label('x',"Time",0.0);
 	//HHSA_gr.Label('y',"FM Frequency",0.0);
 	//HHSA_gr.Label('z',"AM Frequency",0.0);
@@ -1283,18 +1269,76 @@ int main(int argc, char* argv[]) {
 	//HHSA_gr.SetOrigin(max_time/2.0,max_FM_frequency/2.0,max_AM_frequency/2.0);
 	HHSA_gr.Dots(HHSA_3D_x, HHSA_3D_y, HHSA_3D_z, HHSA_3D_a);
 	HHSA_gr.Colorbar(">");
-	HHSA_gr.Puts(mglPoint(Time_cell, Freq_cell*1.3, 0),"log-scale\n(10^n)");
-	HHSA_gr.Puts(mglPoint(Time_cell*0.5, 0, -Holo_Freq_cell*0.25), "Time");
-	HHSA_gr.Puts(mglPoint(0, Freq_cell*0.5, Holo_Freq_cell*1.25), "FMfreq");
-	HHSA_gr.Puts(mglPoint(-Time_cell * 0.25, 0, Holo_Freq_cell * 0.5), "AMfreq");
+	//HHSA_gr.Puts(mglPoint(Time_cell, Freq_cell*1.3, 0),"log-scale\n(10^n)");
+	//HHSA_gr.Puts(mglPoint(Time_cell*0.5, 0, -Holo_Freq_cell*0.25), "Time");
+	//HHSA_gr.Puts(mglPoint(0, Freq_cell*0.5, Holo_Freq_cell*1.25), "FMfreq");
+	//HHSA_gr.Puts(mglPoint(-Time_cell * 0.25, 0, Holo_Freq_cell * 0.5), "AMfreq");
+	HHSA_gr.Puts(mglPoint(max_time, max_FM_frequency * 1.3, 0), "log-scale\n(10^n)");
+	HHSA_gr.Puts(mglPoint(max_time * 0.5, 0, -max_AM_frequency * 0.25), "Time");
+	HHSA_gr.Puts(mglPoint(0, max_FM_frequency * 0.5, max_AM_frequency * 1.25), "FMfreq");
+	HHSA_gr.Puts(mglPoint(-max_time * 0.25, 0, max_AM_frequency * 0.5), "AMfreq");
 	HHSA_gr.Axis();
 
 	HHSA_gr.WriteFrame(OutputFileName);
 	
 
-	printf("\n\n");
+	mglGraph HHSA_animation_gr;
+	sprintf(OutputFileName, "%s_HHSA.gif", InputFileName);
+	HHSA_animation_gr.StartGIF(OutputFileName);
 
-	system("pause");
+	//output HHSA to png
+	for (int k = 0; k < Time_cell; k+=Time_cell_group) {
+
+
+		//Initial HHSA gr map
+		//for(int j=0;j<Freq_cell;++j){
+		//	for(int i=0;i<Holo_Freq_cell;++i){
+		//		HHSA_map[i*Freq_cell+j]=0.0;
+		//	}
+		//}
+
+
+		//Graph of a time cell
+		for (int j = 0; j < Freq_cell; ++j) {
+			for (int i = 0; i < Holo_Freq_cell; ++i) {
+				HHSA_map[i * Freq_cell + j] = 0.00000001;
+				for (int ki = 0;ki < Time_cell_group;++ki) {
+					if (hhsa_map[k][j][i] > 1000000000000.0 || hhsa_map[k][j][i] < -1000000000000.0) continue;
+					HHSA_map[i * Freq_cell + j] += hhsa_map[k+ki][j][i];
+				}
+			}
+		}
+
+		printf("\n\nGenerate HHSA time = %f / %f  ", k * HHSA_dt, max_time);
+
+		//output HHSA to png
+		//sprintf(OutputFileName, "%s_HHSA_TimeCell%04d.png", InputFileName, k);
+		HHSA_animation_gr.NewFrame();
+		
+		HHSA_animation_gr.Clf();
+		HHSA_animation_gr.SetSize(ImageSizeX2, ImageSizeY2);
+		HHSA_animation_gr.Title("Holo-Hilbert");
+		HHSA_animation_gr.Title("Spetra Analysis");
+		sprintf(Text, "T=%f", k * HHSA_dt);
+		HHSA_animation_gr.Title(Text);
+		HHSA_animation_gr.Label('x', "FM Frequency", 0);
+		HHSA_animation_gr.Label('y', "AM Frequency", 0);
+		HHSA_animation_gr.SetRange('c', HHSA_min, log(HHSA_max));
+		HHSA_animation_gr.SetFunc("", "", "", "lg(c)");
+		HHSA_animation_gr.Dens(HHSA_map);
+		HHSA_animation_gr.Colorbar(">");
+		HHSA_animation_gr.SetRange('x', -1.0, 1.0);
+		HHSA_animation_gr.SetRange('y', -1.0, 1.0);
+		HHSA_animation_gr.Puts(mglPoint(1.35, 1.2), "log-scale\n(10^n)");
+		HHSA_animation_gr.SetRange('x', 0.0, max_FM_frequency);
+		HHSA_animation_gr.SetRange('y', 0.0, max_AM_frequency);
+		HHSA_animation_gr.Axis();
+		//HHSA_gr.WriteFrame(OutputFileName);
+
+		HHSA_animation_gr.EndFrame();
+	}
+	HHSA_animation_gr.CloseGIF();  // Finalize GIF
+	printf("HHSA GIF saved to %s\n", OutputFileName);
 }
 
 

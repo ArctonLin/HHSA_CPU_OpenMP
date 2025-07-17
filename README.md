@@ -15,18 +15,26 @@
 
 - And Instantaneous Frequency Paper here: https://www.worldscientific.com/doi/10.1142/S1793536909000096
 
+#### Hilbert Spectra Analysis (HSA, HHT)
+![HSA](HeartRate.txt_HSA.png)
+#### Holo-Hilbert Spectra (HHS)
+![HHS](HeartRate.txt_HHS.png)
+#### Holo-Hilbert Spectra Analysis (HHSA)
+![HHSA_3D](HeartRate.txt_HHSA_3D.png)
+![HHSA_GIF](HeartRate.txt_HHSA.gif)
+
 ### Hardware Requirement
-- At leaset 2.4GB Free Memory to run our small sample. (HeartRate.txt)
+- At leaset 5GB Free Memory to run our small sample. (HeartRate.txt)
 
 ### Compiling
-- Unzip Library: mathgl-8.0-MSVC to C:\mathgl-8.0-MSVC
+- Unzip Library: mathgl-8.0.3-MSVC to D:\Compile\mathgl-8.0.3-MSVC
 
 - open HHSA_CPU_OpenMP.sln with Visual Studio 2022 and Choose Release x64 then Build
 
 ### Execution
 - Move files in Profile Folder to x64\Release Folder
 
-- copy dll from C:\mathgl-8.0-MSVC\bin to x64\Release
+- copy dll from C:\mathgl-8.0.3-MSVC\bin to x64\Release or add C:\mathgl-8.0.3-MSVC\bin into environment $PATH
 
 - modify parameter in HHSA_profile.txt, modify input file in Run_HHSA.bat
 
@@ -60,6 +68,8 @@
 - (INPUT)_HHS.png is the Holo-Hilbert Spectra that plot the AM Frequency and FM Frequency by HHSA result (Sum of all time)
 
 - (INPUT)_HHSA_3D.png is the Holo-Hilbert Spectra Analysis result which is a short time HHS according to TimeCell Duration along Time
+
+- (INPUT)_HHSA.gif is the Holo-Hilbert Spectra Analysis result which is a short time HHS according to TimeCellGroup as step along Time
 
 ### Linux
 - Debian/Ubuntu: "apt-get install libmgl-dev g++ make"
