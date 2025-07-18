@@ -199,7 +199,6 @@ void EEMD(float* data, float** result, float** residual, int length, int mode, f
 	for (int k = 0; k < ensemble; ++k) {
 		//if(CEEMD) printf("CEEMD Ensemble=%d/%d\n",k+1,ensemble);
 		//else printf("EEMD Ensemble=%d/%d\n",k+1,ensemble);
-
 		//printf("Ensemble=%d\n", k);
 
 		float* Input = (float*)malloc(sizeof(float) * length);
@@ -213,7 +212,7 @@ void EEMD(float* data, float** result, float** residual, int length, int mode, f
 		for (int j = 0; j < mode; ++j) {
 			for (int i = 0; i < length; ++i) {
 				MixtureResult[j][i] = 0.0;
-				//MixtureResidual[j][i] = 0.0;
+				MixtureResidual[j][i] = 0.0;
 			}
 		}
 
@@ -226,10 +225,19 @@ void EEMD(float* data, float** result, float** residual, int length, int mode, f
 
 		//Execute EMD
 		EMD(Input, Result, Residual, length, mode, TargetSTDEV);
+		for (int j = 0; j < mode; ++j) {
+			for (int i = 0; i < length; ++i) {
+				#pragma omp atomic
+				MixtureResult[j][i] += Result[j][i];
+				MixtureResidual[j][i] += Residual[j][i];
+			}
+		}
 
-		//#pragma omp critical
-		//{
-			//Add result to mixture result
+		if (CEEMD) {
+			for (int i = 0; i < length; ++i) {
+				Input[i] = Source[i] - Noise[i];
+			}
+			EMD(Input, Result, Residual, length, mode, TargetSTDEV);
 			for (int j = 0; j < mode; ++j) {
 				for (int i = 0; i < length; ++i) {
 					#pragma omp atomic
@@ -237,95 +245,133 @@ void EEMD(float* data, float** result, float** residual, int length, int mode, f
 					MixtureResidual[j][i] += Residual[j][i];
 				}
 			}
-		//}
-
-		if (CEEMD) {
-			for (int i = 0; i < length; ++i) {
-				Input[i] = Source[i] - Noise[i];
-			}
-			EMD(Input, Result, Residual, length, mode, TargetSTDEV);
-			//#pragma omp critical
-			//{
-				for (int j = 0; j < mode; ++j) {
-					for (int i = 0; i < length; ++i) {
-						#pragma omp atomic
-						MixtureResult[j][i] += Result[j][i];
-						MixtureResidual[j][i] += Residual[j][i];
-					}
-				}
-			//}
 		}
+
+		//Free memory for this ensemble
+		free(Input);
+		free(Noise);
+		for (int j = 0; j < mode; ++j) {
+			free(Result[j]);
+			free(Residual[j]);
+		}
+		free(Result);
+		free(Residual);
 	}
 
 	//Calculate Result from MixtureResult
 	if (CEEMD) EnsembleNumber = ensemble * 2;
 	else EnsembleNumber = ensemble;
 	for (int j = 0; j < mode; ++j) {
+		#pragma omp parallel for
 		for (int i = 0; i < length; ++i) {
 			result[j][i] = (data_stdev * MixtureResult[j][i]) / EnsembleNumber;
 			residual[j][i] = (data_stdev * MixtureResidual[j][i]) / EnsembleNumber;
 		}
 	}
 
-	//Fine Tune Result (fix ensemble noise)
-	/*
-	bool *UpExtrema=(bool*)malloc(sizeof(bool)*length);
-	bool *LowExtrema=(bool*)malloc(sizeof(bool)*length);
-	float *UpEnvelope=(float*)malloc(sizeof(float)*length);
-	float *LowEnvelope=(float*)malloc(sizeof(float)*length);
-	float *MeanEnvelope=(float*)malloc(sizeof(float)*length);
-	int UpLength,LowLength;
-	int IterationCount;
-	for(int j=0;j<mode;++j){
-		IterationCount=0;
-		for(int iteration=0;iteration<100;++iteration){
-			//Calculate Upper/Lower Envelope
-			FindExtrema(result[j],length,UpExtrema,UpLength,LowExtrema,LowLength);
-			if(UpLength<1 || LowLength<1) break;
-			Spline(result[j],UpEnvelope,length,UpExtrema,UpLength,1);
-			Spline(result[j],LowEnvelope,length,LowExtrema,LowLength,1);
-			//Calculate Mean Envelope & Subtract
-			for(int i=0;i<length;++i){
-				MeanEnvelope[i]=(UpEnvelope[i]+LowEnvelope[i])*0.5;
-				result[j][i]-=MeanEnvelope[i];
-			}
-			//printf("%d:%d:%f\n",imf,iteration,STDEV(MeanEnvelope,length));
-			IterationCount++;
-			if(STDEV(MeanEnvelope,length)<STDEV(result[j],length)*TargetSTDEV) break;
-		}
-		//printf("FineTune:%d:%d:%f\n",j+1,IterationCount,STDEV(MeanEnvelope,length));
-	}
-	*/
-
-	//Calcuate Residual from Result
-	/*
-	for (int i = 0; i < length; ++i) {
-		//Current[i] = data[i] + avg;
-		Current[i] = data[i];
-	}
-	*/
 	for (int j = 0; j < mode; ++j) {
 		//Check IMF result
 		if (STDEV(result[j], length) > 0.01 * STDEV(data, length)) EMD_success[j] = true;
 		else EMD_success[j] = false;
-
-		//Calculate Residual
-		/*
-		for (int i = 0; i < length; ++i) {
-			Current[i] = Current[i] - result[j][i];
-			residual[j][i] = Current[i];
-		}
-		*/
 	}
 
 	//Release Memory
 	free(Source);
 	free(Current);
-	//free(Input);
-	//free(Noise);
-	for (int j = 0; j < mode; ++j) free(MixtureResult[j]);
+	for (int j = 0; j < mode; ++j) {
+		free(MixtureResult[j]);
+		free(MixtureResidual[j]);
+	}
 	free(MixtureResult);
+	free(MixtureResidual);
 }
+
+//Improved Complete Ensemble Empirical Mode Decomposition with Adaptive Noise 
+void ICEEMDAN(float* data, float** result, float** residual, int length, int mode, int ensemble, bool* EMD_success) {
+	float data_stdev = STDEV(data, length);
+	if (data_stdev < 0.01f) data_stdev = 0.01f;
+
+	float* Residual = (float*)malloc(sizeof(float) * length);
+	float avg = 0.0f;
+	for (int i = 0; i < length; ++i) avg += data[i];
+	avg /= (float)length;
+	for (int i = 0; i < length; ++i) Residual[i] = (data[i] - avg) / data_stdev;
+
+	float* Input = (float*)malloc(sizeof(float) * length);
+	float* Noise = (float*)malloc(sizeof(float) * length);
+	float* MeanEnvelope = (float*)malloc(sizeof(float) * length);
+
+	// Setup random generator
+	const double mean = 0.0;
+	const double stddev = 0.2;
+	std::default_random_engine generator;
+	std::normal_distribution<double> dist(mean, stddev);
+
+	// Buffers
+	bool* UpExtrema = (bool*)malloc(sizeof(bool) * length);
+	bool* LowExtrema = (bool*)malloc(sizeof(bool) * length);
+	float* UpEnvelope = (float*)malloc(sizeof(float) * length);
+	float* LowEnvelope = (float*)malloc(sizeof(float) * length);
+	int UpLength, LowLength;
+
+	for (int imf = 0; imf < mode; ++imf) {
+		memset(MeanEnvelope, 0, sizeof(float) * length);
+		float Residual_stdev = STDEV(Residual, length);
+		// Ensemble averaging of the local mean
+		#pragma omp parallel for
+		for (int k = 0; k < ensemble; ++k) {
+			for (int i = 0; i < length; ++i) {
+				Noise[i] = dist(generator); //0.2 stdev
+			}
+
+			for (int i = 0; i < length; ++i) {
+				Input[i] = Residual[i] + Noise[i] * Residual_stdev;
+			}
+			FindExtrema(Input, length, UpExtrema, UpLength, LowExtrema, LowLength);
+			if (UpLength < 1 || LowLength < 1) continue;
+			Spline(Input, UpEnvelope, length, UpExtrema, UpLength, 1);
+			Spline(Input, LowEnvelope, length, LowExtrema, LowLength, 1);
+			for (int i = 0; i < length; ++i) {
+				#pragma omp atomic
+				MeanEnvelope[i] += (UpEnvelope[i] + LowEnvelope[i]) * 0.5f / ensemble / 2.0f;
+			}
+
+			for (int i = 0; i < length; ++i) {
+				Input[i] = Residual[i] - Noise[i] * Residual_stdev;
+			}
+			FindExtrema(Input, length, UpExtrema, UpLength, LowExtrema, LowLength);
+			if (UpLength < 1 || LowLength < 1) continue;
+			Spline(Input, UpEnvelope, length, UpExtrema, UpLength, 1);
+			Spline(Input, LowEnvelope, length, LowExtrema, LowLength, 1);
+			for (int i = 0; i < length; ++i) {
+				#pragma omp atomic
+				MeanEnvelope[i] += (UpEnvelope[i] + LowEnvelope[i]) * 0.5f / ensemble / 2.0f;
+			}
+		}
+
+		#pragma omp parallel for
+		for (int i = 0; i < length; ++i) {
+			result[imf][i] = (Residual[i] - MeanEnvelope[i]) * data_stdev;
+			residual[imf][i] = Residual[i] * data_stdev;
+		}
+		EMD_success[imf] = STDEV(result[imf], length) > 0.01f * data_stdev;
+		#pragma omp parallel for
+		for (int i = 0; i < length; ++i) {
+			Residual[i] = MeanEnvelope[i];
+		}
+	}
+
+	// Cleanup
+	free(Residual);
+	free(Input);
+	free(Noise);
+	free(MeanEnvelope);
+	free(UpExtrema);
+	free(LowExtrema);
+	free(UpEnvelope);
+	free(LowEnvelope);
+}
+
 
 //3-points Median filter
 float Median(float a, float b, float c) {
@@ -473,7 +519,7 @@ void HSA(float** IF, float** AM, int length, int mode, bool* NDQ_success, float*
 }
 
 //Holo Hilbert Spectra Analysis
-void HHSA(float** imf, int length, int mode, float TargetSTDEV, int ensemble, bool CEEMD, bool* EMD_success, float*** Holo_result, float*** Holo_residual, bool** Holo_EMD_success) {
+void HHSA(float** imf, int length, int mode, float TargetSTDEV, int ensemble, std::string EMD_type, bool* EMD_success, float*** Holo_result, float*** Holo_residual, bool** Holo_EMD_success) {
 	bool* UpExtrema = (bool*)malloc(sizeof(bool) * length);
 	bool* LowExtrema = (bool*)malloc(sizeof(bool) * length);
 	int UpLength, LowLength;
@@ -485,7 +531,17 @@ void HHSA(float** imf, int length, int mode, float TargetSTDEV, int ensemble, bo
 			FindExtrema(imf[j], length, UpExtrema, UpLength, LowExtrema, LowLength);
 			if (UpLength < 3) break;
 			Spline(imf[j], UpEnvelope, length, UpExtrema, UpLength, 0);
-			EEMD(UpEnvelope, Holo_result[j], Holo_residual[j], length, mode, TargetSTDEV, ensemble, CEEMD, Holo_EMD_success[j]);
+			if (EMD_type == "ICEEMDAN") {
+				ICEEMDAN(UpEnvelope, Holo_result[j], Holo_residual[j], length, mode, ensemble, Holo_EMD_success[j]);
+			}
+			else if (EMD_type == "CEEMD") {
+				bool CEEMD = true;
+				EEMD(UpEnvelope, Holo_result[j], Holo_residual[j], length, mode, TargetSTDEV, ensemble, CEEMD, Holo_EMD_success[j]);
+			}
+			else if (EMD_type == "EEMD") {
+				bool CEEMD = false;
+				EEMD(UpEnvelope, Holo_result[j], Holo_residual[j], length, mode, TargetSTDEV, ensemble, CEEMD, Holo_EMD_success[j]);
+			}
 		}
 		else {
 			for (int k = 0; k < mode; ++k) {
@@ -644,7 +700,8 @@ int main(int argc, char* argv[]) {
 	int Time_cell, Freq_cell, Holo_Freq_cell, ImageSizeX1, ImageSizeY1, ImageSizeX2, ImageSizeY2;
 	float TargetSTDEV, dt; //dt=1.0/SampleRate(hz)
 	int Time_cell_group;
-	bool CEEMD = true; //Enable CEEMD?
+	//bool CEEMD = true; //Enable CEEMD?
+	std::string EMD_type = "CEEMD"; //Default EMD type, "EEMD", "CEEMD", "ICEEMDAN"
 
 	//Read default profile
 	if ((fp = fopen("HHSA_profile.txt", "r")) == NULL) {
@@ -664,6 +721,7 @@ int main(int argc, char* argv[]) {
 	fscanf(fp, "%d", &ImageSizeX2);
 	fscanf(fp, "%d", &ImageSizeY2);
 	fscanf(fp, "%d", &Time_cell_group);
+	fscanf(fp, "%s", &EMD_type);
 	fclose(fp);
 
 	/*
@@ -673,7 +731,8 @@ int main(int argc, char* argv[]) {
 	The sum of IMF is data.
 	*/
 
-	printf("CEEMD=%d\n", CEEMD);
+	//printf("CEEMD=%d\n", CEEMD);
+	printf("EMD type=%s\n", EMD_type.c_str());
 	printf("Mode=%d\n", mode);
 	printf("Ensemble=%d\n", ensemble);
 	printf("EMD Stop Criteria (STDEV)=%.10f\n", TargetSTDEV);
@@ -811,11 +870,22 @@ int main(int argc, char* argv[]) {
 
 	//Execute HHT
 	printf("Apply HHT on input data");
-	EEMD(data, result, residual, data_len, mode, TargetSTDEV, ensemble, CEEMD, EMD_success);
+	if (EMD_type == "ICEEMDAN") {
+		ICEEMDAN(data, result, residual, data_len, mode, ensemble, EMD_success);
+	}
+	else if (EMD_type == "CEEMD") {
+		bool CEEMD = true;
+		EEMD(data, result, residual, data_len, mode, TargetSTDEV, ensemble, CEEMD, EMD_success);
+	}
+	else if (EMD_type == "EEMD") {
+		bool CEEMD = false;
+		EEMD(data, result, residual, data_len, mode, TargetSTDEV, ensemble, CEEMD, EMD_success);
+	}
 	printf("\n\n");
 
-	if (CEEMD) printf("CEEMD report:\n");
-	else printf("EEMD report:\n");
+	//if (CEEMD) printf("CEEMD report:\n");
+	//else printf("EEMD report:\n");
+	printf("%s report:\n", EMD_type.c_str());
 	for (int j = 0; j < mode; ++j) printf("%d", (j + 1) % 10);
 	puts("");
 	for (int j = 0; j < mode; ++j) {
@@ -1055,12 +1125,13 @@ int main(int argc, char* argv[]) {
 
 	printf("\n\n");
 
-	HHSA(result, data_len, mode, TargetSTDEV, ensemble, CEEMD, EMD_success, Holo_result, Holo_residual, Holo_EMD_success);
+	HHSA(result, data_len, mode, TargetSTDEV, ensemble, EMD_type, EMD_success, Holo_result, Holo_residual, Holo_EMD_success);
 
 	printf("\n");
 
-	if (CEEMD) printf("HHSA CEEMD report:\n");
-	else printf("HHSA EEMD report:\n");
+	//if (CEEMD) printf("HHSA CEEMD report:\n");
+	//else printf("HHSA EEMD report:\n");
+	printf("HHSA %s report:\n", EMD_type.c_str());
 	printf(" ");
 	for (int k = 0; k < mode; ++k) printf("%d", (k + 1) % 10);
 	printf("\n");
